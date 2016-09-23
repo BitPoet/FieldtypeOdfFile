@@ -7,7 +7,7 @@ This Fieldtype/Inputfield/Process module adds a field type for a (single) ODT do
 ## Status
 This is an early alpha release. Use at your own risk.
 
-I'll be happy for all feedback and reported issues though.
+I'll be happy about all feedback and reported issues though.
 
 ## Compatibility
 ProcessWire Versions 2.7, 2.8 and 3.0.
