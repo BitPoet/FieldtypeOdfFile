@@ -22,14 +22,18 @@ class InputfieldOdfFile extends InputfieldFile implements Module {
 		parent::init();
 
 		$this->set('extensions', 'odt');
-		$this->set('maxFiles', 1); 
+		$this->set('maxFiles', 1);
+		$this->set('editorHeight', '600px');
 	}
 
 	protected function ___renderItem($pagefile, $id, $n) {
 		$markup = parent::___renderItem($pagefile, $id, $n);
 		
 		if($pagefile) {
-			$url = $this->wire('page')->parent->child("name=odf")->url;
+			$this->log->message("page is {$this->page->title}");
+			$this->log->message("parent is {$this->page->parent->title}");
+			$this->log->message("child is " . $this->page->parent->child("name=odf, include=hidden")->title);
+			$url = $this->page->parent->child("name=odf, include=hidden")->url;
 			$markup = str_replace("\n\t\t</div>", "\n\t\t\t<p><a class='pw-modal' href='$url?id={$pagefile->page->id}&f={$this->name}'><i class='fa fa-edit'> </i> " . $this->_("Edit document") . " {$pagefile->name}</a></p>\n\t\t</div>", $markup);
 		}
 		

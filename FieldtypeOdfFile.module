@@ -35,5 +35,14 @@ class FieldtypeOdfFile extends FieldtypeFile {
 		$fcount->attr("name", "maxFiles");
 		$fcount->value = "1";
 		$inputfields->add($fcount);
+		
+		$fheight = $this->modules->get("InputfieldInteger");
+		$fheight->attr("name", "editorHeight");
+		$fheight->label = $this->_("Height of editor");
+		$fheight->note = $this->_("Needs a fixed value in px");
+		$fheight->value = ($field->editorHeight ? $field->editorHeight : 600) . "px";
+		$inputfields->add($fheight);
+		
+		return $inputfields;
 	}
 }

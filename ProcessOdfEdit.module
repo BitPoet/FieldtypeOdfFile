@@ -34,8 +34,6 @@ class ProcessOdfEdit extends Process {
 					    			return;
 					    		}
 					    		var frm = new FormData();
-					    		//docdata = utils.arrayBuffer2Blob(utils.transformTo("arraybuffer", docdata));
-					    		console.dir(docdata);
 					    		frm.append("document", new Blob([docdata], {type: "application/zip"}), "{filename}");
 					    		frm.append("id", "{editpage}");
 					    		frm.append("f", "{fieldname}");
@@ -112,12 +110,12 @@ class ProcessOdfEdit extends Process {
 		$username = $this->user->name;
 		
 		$wrap = new InputfieldWrapper();
-		$wrap->label = $this->_(sprintf("Editing document %s on page %s"), $doc->name, $editpage->name);
+		$wrap->label = sprintf($this->_("Editing document %s on page %s"), $doc->name, $editpage->name);
 		
 		$mrk = $this->modules->get("InputfieldMarkup");
 		$mrk->value = str_replace(
 			array('{width}', '{height}', '{editorid}'),
-			array($this->width, $this->height, $editorid),
+			array($this->width, $editpage->template->fieldgroup->getField($fldname, true)->editorHeight . "px", $editorid),
 			$this->markup["editor"]
 		);
 		$wrap->add($mrk);
@@ -163,6 +161,7 @@ class ProcessOdfEdit extends Process {
 		}
 
 		if( ! file_exists($_FILES["document"]["tmp_name"])) {
+			$this->debugmsgs .= print_r($_FILES["document"], true);
 			return $this->json_error(sprintf($this->_("Source file %s doesn't exist!"), $_FILES["document"]["tmp_name"]));
 		}
 
@@ -199,6 +198,7 @@ class ProcessOdfEdit extends Process {
 			$pg->title = 'ODF';
 			$pg->process = 'ProcessOdfEdit';
 			$pg->addStatus(Page::statusHidden);
+			$pg->save();
 		}
 	}
 
