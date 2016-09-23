@@ -17,6 +17,21 @@ ProcessWire Versions 2.7, 2.8 and 3.0.
 ## Installation
 Download a zip package here through the green button and extract it into your PW installation's site/modules folder. In the backend, click on "Modules" -> "Refresh", then click "Install" for FieldtypeOdfFile. The other two modules (InputfieldOdfFile and ProcessOdfEdit) will be installed alongside.
 
+## Usage
+
+Create a file named e.g. "odffile" and select type "OdfFile". Change any settings you need. Compared to a regular InputfieldFile, maxFiles and extensions are removed (we currently only allow one file of type odt) and a new setting for editor height (in pixels) has been added on the details tab.
+
+Add the field to your template, then edit a page with this template and add an odt file. Save the page, then click on the "Edit this document" link. The editor will open in an overlay.
+
+Save any changes you made with the "save" button (second from left) in the editor toolbar.
+
+## Known issues
+
+- Text flow around images is garbled
+- Inserting images works but the can't be resized and make documents huge
+- Changes in a document's size aren't reflected in the page editor after closing the overlay
+- There's no check for unsaved changes (yet)
+
 ## Technical stuff
 The module extends InputfieldFile and does some stuff to force configuration values like maxFiles etc.
 
