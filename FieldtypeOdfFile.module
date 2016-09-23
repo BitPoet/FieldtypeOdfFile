@@ -1,0 +1,39 @@
+<?php
+
+
+class FieldtypeOdfFile extends FieldtypeFile {
+	public static function getModuleInfo() {
+		return array(
+			"title"				=>	"Fieldtype ODF File",
+			"summary"			=>	"Inline editable Open Document Format text file",
+			"version"			=>	"0.0.5",
+			"installs"			=>	array("InputfieldOdfFile", "ProcessOdfEdit"),
+		);
+	}
+
+	public function getInputfield(Page $page, Field $field) {
+		$field->extensions = "odt";
+		
+		return parent::getInputfield($page, $field);
+	}
+
+	public function ___getConfigInputfields(Field $field) {
+		$inputfields = parent::___getConfigInputfields($field);
+		
+		$ftypes = $inputfields->get("extensions");
+		$inputfields->remove($ftypes);
+		
+		$ftypes = $this->modules->get("InputfieldHidden");
+		$ftypes->attr("name", "extensions");
+		$ftypes->value = "odt";
+		$inputfields->add($ftypes);
+		
+		$fcount = $inputfields->get("maxFiles");
+		$inputfields->remove($fcount);
+		
+		$fcount = $this->modules->get("InputfieldHidden");
+		$fcount->attr("name", "maxFiles");
+		$fcount->value = "1";
+		$inputfields->add($fcount);
+	}
+}

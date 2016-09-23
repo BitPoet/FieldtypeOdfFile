@@ -1,0 +1,38 @@
+<?php
+/**
+ * InputfieldOdfFile
+ *
+ * ProcessWire Module for inline editable Open Document Format text file
+ *
+ * written 2016 by the.bitpoet@gmail.com
+ *
+ */
+
+class InputfieldOdfFile extends InputfieldFile implements Module {
+	public static function getModuleInfo() {
+		return array(
+			"title"				=>	"Inputfield ODF File",
+			"summary"			=>	"Inline editable Open Document Format text file",
+			"version"			=>	"0.0.5",
+			"autoload"			=>	true,
+		);
+	}
+	
+	public function init() {
+		parent::init();
+
+		$this->set('extensions', 'odt');
+		$this->set('maxFiles', 1); 
+	}
+
+	protected function ___renderItem($pagefile, $id, $n) {
+		$markup = parent::___renderItem($pagefile, $id, $n);
+		
+		if($pagefile) {
+			$url = $this->wire('page')->parent->child("name=odf")->url;
+			$markup = str_replace("\n\t\t</div>", "\n\t\t\t<p><a class='pw-modal' href='$url?id={$pagefile->page->id}&f={$this->name}'><i class='fa fa-edit'> </i> " . $this->_("Edit document") . " {$pagefile->name}</a></p>\n\t\t</div>", $markup);
+		}
+		
+		return $markup;
+	}
+}

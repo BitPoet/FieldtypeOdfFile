@@ -1,0 +1,215 @@
+<?php
+
+class ProcessOdfEdit extends Process {
+	public static function getModuleInfo() {
+		return array(
+			"title"				=>	"ODF File Editing",
+			"summary"			=>	"Process module for inline editable Open Document Format text file",
+			"version"			=>	"0.0.5",
+		);
+	}
+
+	protected $defaultWidth = '100%';
+	protected $width;
+	protected $defaultHeight = '800px';
+	protected $height;
+
+	protected $debugmsgs = "";
+
+	protected $defaultMarkup = array(
+		"editor"		=>	"<div class='pw-webodf-editor' id='{editorid}' style='width: {width}; height: {height}; line-height: normal; font-size: 1rem;'></div>",
+		"script"		=>	'
+			<script type="text/javascript">
+				var currentEditor = null;
+				$(document).ready(function() {
+					Wodo.createTextEditor("{editorid}", {
+					    allFeaturesEnabled: true,
+					    userData: {
+					        fullName: "{user}"
+					    },
+					    saveCallback:	function() {
+					    	currentEditor.getDocumentAsByteArray(function(err, docdata) {
+					    		if(err) {
+					    			alert("Error saving document: " + err);
+					    			return;
+					    		}
+					    		var frm = new FormData();
+					    		//docdata = utils.arrayBuffer2Blob(utils.transformTo("arraybuffer", docdata));
+					    		console.dir(docdata);
+					    		frm.append("document", new Blob([docdata], {type: "application/zip"}), "{filename}");
+					    		frm.append("id", "{editpage}");
+					    		frm.append("f", "{fieldname}");
+					    		$.ajax({
+					    			url:			"{saveurl}",
+					    			type:			"POST",
+					    			data:			frm,
+					    			processData:	false,
+					    			//enctype:		"multipart/form-data",
+					    			contentType:	false
+					    		});
+					    	});
+					    }
+					}, function (err, editor) {
+					    if (err) {
+					        // something failed unexpectedly, deal with it (here just a simple alert)
+					        alert(err);
+					        return;
+					    }
+					    editor.openDocumentFromUrl("{url}", function(err) {
+					        if (err) {
+					            // something failed unexpectedly, deal with it (here just a simple alert)
+					            alert("There was an error on opening the document: " + err);
+					            return;
+					        }
+					        currentEditor = editor;
+					    });
+					});
+				});
+			</script>
+		'
+	);
+	protected $markup;
+
+	public function init() {
+		$this->width = $this->defaultWidth;
+		$this->height = $this->defaultHeight;
+		$this->markup = $this->defaultMarkup;
+		
+		$class = $this->className();
+		$info = self::getModuleInfo();
+		$ver = $info['version'];
+
+		$this->wire('modules')->get('JqueryCore');
+		$jQueryUI = $this->modules->get('JqueryUI');
+		$jQueryUI->use('modal');
+
+		parent::init();
+
+		$this->config->scripts->add($this->config->urls->$class . "wodotexteditor/wodotexteditor.js?v=$ver");
+		$this->config->scripts->add($this->config->urls->$class . "$class.js?v=$ver");
+	}
+
+	public function execute() {
+		
+		if(! $this->input->get->id) {
+			return "<p>" . $this->_("No page given") . "</p>";
+		}
+		
+		$editpage = $this->pages->get((int)$this->input->get->id);
+		
+		if(! $this->input->get->f) {
+			return "<p>" . $this->_("No field given") . "</p>";
+		}
+		
+		$fldname = $this->sanitizer->name($this->input->get->f);
+		$doc = $editpage->$fldname;
+		
+		if($doc instanceof Pagefiles) {
+			$doc = $doc->first();
+		}
+		
+		$editorid = "odfeditor-$fldname";
+		$username = $this->user->name;
+		
+		$wrap = new InputfieldWrapper();
+		$wrap->label = $this->_(sprintf("Editing document %s on page %s"), $doc->name, $editpage->name);
+		
+		$mrk = $this->modules->get("InputfieldMarkup");
+		$mrk->value = str_replace(
+			array('{width}', '{height}', '{editorid}'),
+			array($this->width, $this->height, $editorid),
+			$this->markup["editor"]
+		);
+		$wrap->add($mrk);
+		
+		$script = str_replace(
+			array('{editorid}', '{user}', '{url}', '{filename}', '{saveurl}', '{editpage}', '{fieldname}'),
+			array($editorid, $username, $doc->url . "?ts=" . time(), $doc->name, $this->page->url . "update", $editpage->id, $fldname),
+			$this->markup["script"]
+		);
+		
+		/*
+		$button = $this->modules->get("InputfieldButton");
+		$button->attr('id+name', $editorid . "_Submit");
+		$button->addClass('head_button_clone');
+		$button->attr('data-editor', $editorid);
+		$button->value = $this->_("Save");
+		$button->attr('onclick', 'saveeditor(this)');
+
+		return $wrap->render() . "\n" . $button->render() . "\n" . $script;
+		*/
+
+		return $wrap->render() . "\n" . $script;
+	}
+	
+	public function executeUpdate() {
+		if( ! $this->input->post->id ) {
+			return $this->json_error($this->_("No page id given"));
+		}
+		if( ! $this->input->post->f ) {
+			return $this->json_error($this->_("No field name given"));
+		}
+		if( count($_FILES) == 0 || ! isset($_FILES["document"]) ) {
+			return $this->json_error($this->_("Missing data of document to save!"));
+		}
+		
+		$editpage = $this->pages->get((int)$this->input->post->id);
+		
+		$fldname = $this->sanitizer->name($this->input->post->f);
+		$doc = $editpage->$fldname;
+		
+		if($doc instanceof Pagefiles) {
+			$doc = $doc->first();
+		}
+
+		if( ! file_exists($_FILES["document"]["tmp_name"])) {
+			return $this->json_error(sprintf($this->_("Source file %s doesn't exist!"), $_FILES["document"]["tmp_name"]));
+		}
+
+		if( ! rename($_FILES["document"]["tmp_name"], $doc->filename) ) {
+			return $this->json_error($this->_("Updating document {$doc->filename} failed!"));
+		}
+		
+		header('Content-type: text/plain');
+
+		return json_encode(array(
+			"success"	=>		true
+		));
+	}
+
+	protected function json_error($msg) {
+		header('Content-type: text/plain');
+		return json_encode(array(
+			"success"	=>	false,
+			"msg"		=>	$msg,
+			"debug"		=>	$this->debugmsgs
+		));
+	}
+
+	public function install() {
+		$admin = $this->pages->get($this->config->adminRootPageID);
+		$prnt = $admin->child('name=page');
+		$pg = $prnt->child('name=odf');
+
+		if( $pg instanceof NullPage ) {
+			$pg = new Page();
+			$pg->parent = $prnt;
+			$pg->name = 'odf';
+			$pg->template = 'admin';
+			$pg->title = 'ODF';
+			$pg->process = 'ProcessOdfEdit';
+			$pg->addStatus(Page::statusHidden);
+		}
+	}
+
+
+	public function uninstall() {
+		$admin = $this->pages->get($this->config->adminRootPageID);
+		$prnt = $admin->child('name=page');
+		$pg = $prnt->child('name=odf');
+		
+		if( ! $pg instanceof NullPage ) {
+			$this->pages->delete($pg);
+		}
+	}
+}
